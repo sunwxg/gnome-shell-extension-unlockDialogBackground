@@ -23,7 +23,7 @@
       </description>
     </key>
     <key name="picture-uri" type="s">
-      <default>'file:///home/suse/test.png'</default>
+			<default>'/path/to/picture'</default>
       <summary>Picture URI</summary>
       <description>
         URI to use for the background image. Note that the backend only supports
