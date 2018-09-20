@@ -2,9 +2,10 @@ const Gtk = imports.gi.Gtk;
 
 const Me = imports.misc.extensionUtils.getCurrentExtension();
 const Convenience = Me.imports.convenience;
-let gsettings;
 
 const SCHEMA_NAME = 'org.gnome.shell.extensions.unlockDialogBackground';
+
+let gsettings;
 
 function init() {
     gsettings = Convenience.getSettings(SCHEMA_NAME);
