@@ -53,7 +53,7 @@ function addSwitch() {
 function addPictureUrl() {
     let hbox = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, margin_top: 5 });
     let setting_label = new Gtk.Label({ label: "Picture", xalign: 0 });
-    let setting_entry = new Gtk.Entry();
+    let setting_entry = new Gtk.Entry({ margin_left: 10, x_expand: true });
 
     setting_entry.set_text(gsettings.get_string('picture-uri'));
     setting_entry.connect('changed', (entry) => { gsettings.set_string('picture-uri', entry.get_text()); });
