@@ -23,7 +23,7 @@
       </description>
     </key>
     <key name="picture-uri" type="s">
-			<default>'/path/to/picture'</default>
+      <default>'/path/to/picture'</default>
       <summary>Picture URI</summary>
       <description>
         URI to use for the background image. Note that the backend only supports
