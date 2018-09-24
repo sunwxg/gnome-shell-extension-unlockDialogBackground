@@ -1,4 +1,8 @@
 const Gtk = imports.gi.Gtk;
+const GdkPixbuf = imports.gi.GdkPixbuf;
+const Gdk = imports.gi.Gdk;
+const Clutter = imports.gi.Clutter;
+const Cairo = imports.cairo;
 
 const Me = imports.misc.extensionUtils.getCurrentExtension();
 const Convenience = Me.imports.convenience;
@@ -30,6 +34,7 @@ function buildPrefsWidget() {
     addBoldTextToBox("Change background", vbox);
     vbox.add(new Gtk.HSeparator({margin_bottom: 5, margin_top: 5}));
     vbox.add(addPictureUrl());
+    vbox.add(addPictureShow());
 
     widget.add(vbox);
 
@@ -62,6 +67,35 @@ function addPictureUrl() {
     hbox.add(setting_entry);
 
     return hbox;
+}
+
+function draw_callback(widget, cr) {
+}
+
+function addPictureShow() {
+    //let hbox = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, margin_top: 5, expand: false });
+    let pixbuf = GdkPixbuf.Pixbuf.new_from_file('/home/suse/test.png');
+    //pixbuf.scale_simple(50, 20, GdkPixbuf.InterpType.BILINEAR);
+    //let image = new Gtk.Image();
+    //image.set_from_file(gsettings.get_string('picture-uri'));
+    //image.set_from_file("/home/suse/test.png");
+    //image.set_pixel_size(50);
+    //image.set_from_pixbuf(pixbuf);
+
+    //hbox.pack_start(image, true, true, 0);
+
+    let drawArea = new Gtk.DrawingArea();
+    drawArea.set_size_request(200,100);
+    drawArea.connect('draw', (da) => {
+	    let cr = Gdk.cairo_create(da.get_window());
+	    Gdk.cairo_set_source_pixbuf(cr, pixbuf, 0, 0);
+	    //Cairo.paint(cr);
+	    //Gdk.cairo_fill(cr);
+	    //cr.cairo_paint();
+	    da.get_window().cairo_paint();
+    });
+
+    return drawArea;
 }
 
 function addBoldTextToBox(text, box) {
