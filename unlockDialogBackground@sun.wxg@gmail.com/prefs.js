@@ -68,10 +68,37 @@ class PrefsWidget {
         this.setting_entry.set_text(this.gsettings.get_string('picture-uri'));
         this.setting_entry.connect('changed', (entry) => { this.gsettings.set_string('picture-uri', entry.get_text()); });
 
+        this.fileChooseButton = new Gtk.Button({ margin_left: 5 });
+        this.fileChooseButton.set_label("Browse");
+        this.fileChooseButton.connect("clicked", this.showFileChooserDialog.bind(this));
+
+
         hbox.pack_start(setting_label, false, true, 0);
         hbox.add(this.setting_entry);
+        hbox.add(this.fileChooseButton);
 
         return hbox;
+    }
+
+    showFileChooserDialog() {
+        let fileChooser = new Gtk.FileChooserDialog({ title: "Select File" });
+        fileChooser.set_transient_for(this.widget.get_parent());
+
+        fileChooser.add_button("Cancel", Gtk.ResponseType.CANCEL);
+        fileChooser.add_button("Open", Gtk.ResponseType.ACCEPT);
+
+        switch(fileChooser.run()) {
+            case Gtk.ResponseType.CANCEL:
+                fileChooser.destroy();
+                break;
+            case Gtk.ResponseType.ACCEPT:
+                let file = fileChooser.get_uris();
+                if (file.length > 0 && file[0].startsWith("file://"))
+                    this.setting_entry.set_text(file[0].substring(7));
+                fileChooser.destroy();
+                break;
+            default:
+        }
     }
 
     addPictureShow() {
@@ -87,10 +114,10 @@ class PrefsWidget {
             cr.paint();
         });
 
-        this.setting_entry.connect('changed', () => {
-            if (GLib.file_test(this.gsettings.get_string('picture-uri'), GLib.FileTest.EXISTS))
-                this.drawArea.queue_draw();
-            });
+        this.setting_entry.connect('changed', (entry) => {
+                                    if (GLib.file_test(entry.get_text(), GLib.FileTest.EXISTS))
+                                        this.drawArea.queue_draw();
+                                    });
 
         let hbox = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL,
                                  margin_top: 10,
