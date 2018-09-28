@@ -109,7 +109,7 @@ class PrefsWidget {
     addPictureShow() {
         this.drawArea = new Gtk.DrawingArea({ expand: true });
         this.drawArea.connect('draw', (widget, cr) => {
-            let pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_size(this.gsettings.get_string('picture-uri'),
+            let pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_size(this.setting_entry.get_text(),
                                                                 -1,
                                                                 widget.get_allocated_height());
 
