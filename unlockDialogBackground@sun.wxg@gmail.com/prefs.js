@@ -83,6 +83,11 @@ class PrefsWidget {
     showFileChooserDialog() {
         let fileChooser = new Gtk.FileChooserDialog({ title: "Select File" });
         fileChooser.set_transient_for(this.widget.get_parent());
+        fileChooser.set_default_response(1);
+
+        let filter = new Gtk.FileFilter();
+        filter.add_pixbuf_formats();
+        fileChooser.filter = filter;
 
         fileChooser.add_button("Cancel", Gtk.ResponseType.CANCEL);
         fileChooser.add_button("Open", Gtk.ResponseType.ACCEPT);
