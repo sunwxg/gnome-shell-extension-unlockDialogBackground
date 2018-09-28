@@ -33,7 +33,7 @@ class PrefsWidget {
             orientation: Gtk.Orientation.VERTICAL,
             margin: 20, margin_top: 0
         });
-        this.vbox.set_size_request(550, 350);
+        this.vbox.set_size_request(550, 550);
 
         this.addBoldTextToBox("Enable and disable unblank function", this.vbox);
         this.vbox.add(new Gtk.HSeparator({margin_bottom: 5, margin_top: 5}));
