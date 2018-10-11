@@ -4,6 +4,8 @@ const Gio = imports.gi.Gio;
 const Clutter = imports.gi.Clutter;
 const GLib = imports.gi.GLib;
 const St = imports.gi.St;
+const Gtk = imports.gi.Gtk;
+const Gdk = imports.gi.Gdk;
 const Mainloop = imports.mainloop;
 
 const Gettext = imports.gettext.domain('gnome-shell-extensions');
@@ -22,6 +24,7 @@ const ScreenShield = imports.ui.screenShield;
 const Meta = imports.gi.Meta;
 
 const BACKGROUND_SCHEMA = 'org.gnome.shell.extensions.unlockDialogBackground';
+const COLOR = 'rgb(50, 50, 50)';
 
 function newInit(layoutManager, settingsSchema) {
     // Allow override the background image setting for performance testing
@@ -41,11 +44,64 @@ function newInit(layoutManager, settingsSchema) {
                                this._onMonitorsChanged.bind(this));
 }
 
+function _ensureUnlockDialogNew(onPrimary, allowCancel) {
+    if (!this._dialog) {
+        let constructor = Main.sessionMode.unlockDialog;
+        if (!constructor) {
+            // This session mode has no locking capabilities
+            this.deactivate(true);
+            return false;
+        }
+
+        this._dialog = new constructor(this._lockDialogGroup);
+
+        if (themeBackground) {
+            this._dialog._authPrompt.actor.style = 'background-color: rgba(65, 71, 72, 0.5); border-radius: 8px';
+            this._dialog._otherUserButton.style = 'background-color: rgba(65, 71, 72, 0.5); border-radius: 8px';
+        }
+
+        if (themeTextDark) {
+            if (this._dialog._authPrompt._userWell.get_child().get_children().length >=1) {
+                //user label
+                let userLabel = this._dialog._authPrompt._userWell.get_child().get_children()[1];
+                userLabel._userNameLabel.set_style('color: %s;'.format(COLOR));
+                userLabel._realNameLabel.set_style('color: %s;'.format(COLOR));
+
+                //user icon
+                let userIcon = this._dialog._authPrompt._userWell.get_child().get_children()[0];
+                userIcon.set_style('color: %s; border: 2px solid %s;'.format(COLOR, COLOR));
+            }
+
+            //password label
+            this._dialog._authPrompt._label.set_style('color: %s;'.format(COLOR));
+
+            //other user label
+            this._dialog._otherUserButton.get_child().set_style('color:%s;'.format(COLOR));
+        }
+
+        let time = global.get_current_time();
+        if (!this._dialog.open(time, onPrimary)) {
+            // This is kind of an impossible error: we're already modal
+            // by the time we reach this...
+            log('Could not open login dialog: failed to acquire grab');
+            this.deactivate(true);
+            return false;
+        }
+
+        this._dialog.connect('failed', this._onUnlockFailed.bind(this));
+    }
+
+    this._dialog.allowCancel = allowCancel;
+    return true;
+}
+
 class DialogBackground {
     constructor() {
         this._gsettings = Convenience.getSettings(BACKGROUND_SCHEMA);
 
         Background.BackgroundSource.prototype._init = newInit;
+
+        this._ensureUnlockDialogOrigin = Main.screenShield._ensureUnlockDialog;
 
         this.connect_signal();
         this._switchChanged();
@@ -83,6 +139,7 @@ class DialogBackground {
     _switchChanged() {
         this._enable = this._gsettings.get_boolean('switch');
         if (this._enable) {
+            Main.screenShield._ensureUnlockDialog = _ensureUnlockDialogNew;
             Main.screenShield._backgroundDialogGroup = new Clutter.Actor();
             Main.screenShield._lockDialogGroup.add_actor(Main.screenShield._backgroundDialogGroup);
             Main.screenShield._backgroundDialogGroup.lower_bottom();
@@ -91,6 +148,8 @@ class DialogBackground {
             this._updateDialogBackgrounds();
             this._updateDialogBackgroundId = Main.layoutManager.connect('monitors-changed', this._updateDialogBackgrounds.bind(this));
         } else {
+            Main.screenShield._ensureUnlockDialog = this._ensureUnlockDialogOrigin;
+
             if (Main.screenShield._backgroundDialogGroup == null)
                 return;
 
@@ -116,8 +175,19 @@ class DialogBackground {
 }
 
 let background;
+let themeBackground;
+let themeTextDark;
+let gsettings;
 
 function init() {
+    gsettings = Convenience.getSettings(BACKGROUND_SCHEMA);
+
+    themeTextDark = gsettings.get_boolean('theme-text-dark');
+    themeBackground = gsettings.get_boolean('theme-background');
+
+    gsettings.connect("changed::theme-background", () => { themeBackground = gsettings.get_boolean('theme-background'); });
+    gsettings.connect("changed::theme-text-dark", () => { themeTextDark = gsettings.get_boolean('theme-text-dark'); });
+
     background = new DialogBackground();
 }
 
