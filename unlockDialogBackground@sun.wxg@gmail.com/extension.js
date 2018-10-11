@@ -56,8 +56,9 @@ function _ensureUnlockDialogNew(onPrimary, allowCancel) {
         this._dialog = new constructor(this._lockDialogGroup);
 
         if (themeBackground) {
-            this._dialog._authPrompt.actor.style = 'background-color: rgba(65, 71, 72, 0.5); border-radius: 8px';
-            this._dialog._otherUserButton.style = 'background-color: rgba(65, 71, 72, 0.5); border-radius: 8px';
+            this._dialog._promptBox.style = 'background-color: rgba(65, 71, 72, 0.5);'
+                                            + 'border-radius: 8px;'
+                                            + 'border: 8px';
         }
 
         if (themeTextDark) {
