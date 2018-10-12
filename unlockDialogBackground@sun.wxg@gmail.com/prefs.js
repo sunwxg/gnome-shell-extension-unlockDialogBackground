@@ -38,6 +38,9 @@ class PrefsWidget {
         this.addBoldTextToBox("Enable and disable unblank function", this.vbox);
         this.vbox.add(new Gtk.HSeparator({margin_bottom: 5, margin_top: 5}));
         this.vbox.add(this.addSwitch());
+
+        this.addBoldTextToBox("Background picture is light color", this.vbox);
+        this.vbox.add(new Gtk.HSeparator({margin_bottom: 5, margin_top: 5}));
         this.vbox.add(this.addThemeBackground());
         this.vbox.add(this.addThemeTextDark());
 
@@ -64,7 +67,7 @@ class PrefsWidget {
 
     addThemeBackground() {
         let hbox = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, margin_top: 5 });
-        let setting_label = new Gtk.Label({ label: "Use semitransparent background when background is light color", xalign: 0 });
+        let setting_label = new Gtk.Label({ label: "Use semitransparent background", xalign: 0 });
         this.settingThemeBackground = new Gtk.Switch({ active: this.gsettings.get_boolean('theme-background') });
 
         this.settingThemeBackground.connect('notify::active', (button) => { this.gsettings.set_boolean('theme-background', button.active); });
@@ -77,7 +80,7 @@ class PrefsWidget {
 
     addThemeTextDark() {
         let hbox = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, margin_top: 5 });
-        let setting_label = new Gtk.Label({ label: "Use dark text when background is light color", xalign: 0 });
+        let setting_label = new Gtk.Label({ label: "Use dark text", xalign: 0 });
         this.settingThemeTextDark= new Gtk.Switch({ active: this.gsettings.get_boolean('theme-text-dark') });
 
         this.settingThemeTextDark.connect('notify::active', (button) => { this.gsettings.set_boolean('theme-text-dark', button.active); });
