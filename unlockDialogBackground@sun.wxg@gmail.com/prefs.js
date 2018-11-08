@@ -130,7 +130,7 @@ class PrefsWidget {
             case Gtk.ResponseType.ACCEPT:
                 let file = fileChooser.get_uris();
                 if (file.length > 0 && file[0].startsWith("file://"))
-                    this.setting_entry.set_text(file[0].substring(7));
+                    this.setting_entry.set_text(decodeURIComponent(file[0].substring(7)));
                 fileChooser.destroy();
                 break;
             default:
