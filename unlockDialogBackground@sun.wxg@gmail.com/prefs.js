@@ -123,6 +123,30 @@ class PrefsWidget {
         fileChooser.add_button("Cancel", Gtk.ResponseType.CANCEL);
         fileChooser.add_button("Open", Gtk.ResponseType.ACCEPT);
 
+        let preview_image = new Gtk.Image();
+        fileChooser.set_preview_widget(preview_image);
+
+        fileChooser.connect('update-preview', (dialog) => {
+        dialog.set_preview_widget_active(false);
+            let file = fileChooser.get_uris();
+            if (file.length > 0 && file[0].startsWith("file://")) {
+                file = decodeURIComponent(file[0].substring(7));
+            } else {
+                return;
+            }
+            let pixbuf = GdkPixbuf.Pixbuf.new_from_file(file);
+            let maxwidth = 400.0, maxheight = 800.0;
+            let width = pixbuf.get_width(), height = pixbuf.get_height();
+            let scale = Math.min(maxwidth / width, maxheight / height);
+            if (scale < 1) {
+                width = width * scale;
+                height = height * scale;
+                pixbuf = pixbuf.scale_simple(width.toFixed(0), height.toFixed(0), GdkPixbuf.InterpType.BILINEAR);
+            }
+            preview_image.set_from_pixbuf(pixbuf);
+            dialog.set_preview_widget_active(true);
+        });
+
         switch(fileChooser.run()) {
             case Gtk.ResponseType.CANCEL:
                 fileChooser.destroy();
