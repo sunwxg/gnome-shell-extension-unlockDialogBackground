@@ -12,6 +12,6 @@ make install
 relogin OS
 ```
 
-From gnome extensions website: https://extensions.gnome.org/extension/
+From gnome extensions website: https://extensions.gnome.org/extension/1476/unlock-dialog-background/
 
 ![screenshot](/screenshot.png)
