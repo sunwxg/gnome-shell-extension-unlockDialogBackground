@@ -2,7 +2,7 @@
   "description": "Change unlock dialog background.\nYou can change background picture from extension settings",
   "name": "Unlock dialog background",
   "original-authors": "sun.wxg@gmail.com",
-  "shell-version": [ "3.26", "3.28", "3.30" ],
+  "shell-version": [ "3.26", "3.28", "3.30", "3.32" ],
   "url": "https://github.com/sunwxg/gnome-shell-extension-unlockDialogBackground",
   "uuid": "unlockDialogBackground@sun.wxg@gmail.com",
   "version": 1
