@@ -26,23 +26,15 @@ const Meta = imports.gi.Meta;
 const BACKGROUND_SCHEMA = 'org.gnome.shell.extensions.unlockDialogBackground';
 const COLOR = 'rgb(50, 50, 50)';
 
-function newInit(layoutManager, settingsSchema) {
-    // Allow override the background image setting for performance testing
-    this._layoutManager = layoutManager;
-    this._overrideImage = GLib.getenv('SHELL_BACKGROUND_IMAGE');
-
-    if (settingsSchema.includes("unlockDialogBackground"))
-        this._settings = Convenience.getSettings(settingsSchema);
-    else
-        this._settings = new Gio.Settings({ schema_id: settingsSchema });
-
-    this._backgrounds = [];
-
-    let monitorManager = Meta.MonitorManager.get();
-    this._monitorsChangedId =
-        monitorManager.connect('monitors-changed',
-                               this._onMonitorsChanged.bind(this));
-}
+var newBackgroundSource = class extends Background.BackgroundSource {
+    constructor(layoutManager, settingsSchema) {
+        if (settingsSchema.includes("unlockDialogBackground")) {
+            super(layoutManager, 'org.gnome.desktop.background');
+            this._settings = Convenience.getSettings(settingsSchema);
+        } else
+            super(layoutManager, settingsSchema);
+    }
+};
 
 function _ensureUnlockDialogNew(onPrimary, allowCancel) {
     if (!this._dialog) {
@@ -100,7 +92,7 @@ class DialogBackground {
     constructor() {
         this._gsettings = Convenience.getSettings(BACKGROUND_SCHEMA);
 
-        Background.BackgroundSource.prototype._init = newInit;
+        Background.BackgroundSource = newBackgroundSource;
 
         this._ensureUnlockDialogOrigin = Main.screenShield._ensureUnlockDialog;
 
