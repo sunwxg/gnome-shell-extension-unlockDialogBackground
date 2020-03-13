@@ -1,10 +1,9 @@
 {
-  "description": "Change unlock dialog background.\nYou can change background picture from extension settings.\nIf you use Ubuntu, install package gir1.2-clutter-1.0 first.",
-  "name": "Unlock dialog background",
+  "description": "Change lock screen background.\nIf you use Ubuntu, install package gir1.2-clutter-1.0 first.",
+  "name": "Lock screen background",
   "original-authors": "sun.wxg@gmail.com",
   "shell-version": [
-   "3.32",
-   "3.34"
+   "3.36"
   ],
   "url": "https://github.com/sunwxg/gnome-shell-extension-unlockDialogBackground",
   "uuid": "unlockDialogBackground@sun.wxg@gmail.com"

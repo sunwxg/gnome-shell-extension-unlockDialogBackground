@@ -1,164 +1,138 @@
 // -*- mode: js2; indent-tabs-mode: nil; js2-basic-offset: 4 -*-
 
-const Gio = imports.gi.Gio;
-const Clutter = imports.gi.Clutter;
-const GLib = imports.gi.GLib;
-const St = imports.gi.St;
-const Gtk = imports.gi.Gtk;
-const Gdk = imports.gi.Gdk;
-const Mainloop = imports.mainloop;
-
-const Gettext = imports.gettext.domain('gnome-shell-extensions');
-const _ = Gettext.gettext;
+const { Clutter, Gio, GLib, Shell, St, Gdk, Gtk } = imports.gi;
 
 const Main = imports.ui.main;
 const MessageTray = imports.ui.messageTray;
 const Tweener = imports.ui.tweener;
+const UnlockDialog = imports.ui.unlockDialog
 
 const ExtensionUtils = imports.misc.extensionUtils;
-const Me = ExtensionUtils.getCurrentExtension();
-const Convenience = Me.imports.convenience;
 
 const Background = imports.ui.background;
 const ScreenShield = imports.ui.screenShield;
-const Meta = imports.gi.Meta;
+
+const BLUR_BRIGHTNESS = 0.55;
+const BLUR_SIGMA = 60;
+const CROSSFADE_TIME = 300;
 
 const BACKGROUND_SCHEMA = 'org.gnome.shell.extensions.unlockDialogBackground';
-const COLOR = 'rgb(50, 50, 50)';
 
 var newBackgroundSource = class extends Background.BackgroundSource {
     constructor(layoutManager, settingsSchema) {
         if (settingsSchema.includes("unlockDialogBackground")) {
             super(layoutManager, 'org.gnome.desktop.background');
-            this._settings = Convenience.getSettings(settingsSchema);
+            this._settings = ExtensionUtils.getSettings(settingsSchema);
         } else
             super(layoutManager, settingsSchema);
     }
 };
 
-function _ensureUnlockDialogNew(onPrimary, allowCancel) {
-    if (!this._dialog) {
-        let constructor = Main.sessionMode.unlockDialog;
-        if (!constructor) {
-            // This session mode has no locking capabilities
-            this.deactivate(true);
-            return false;
+function _createBackgroundNew(monitorIndex) {
+    let monitor = Main.layoutManager.monitors[monitorIndex];
+    let widget = new St.Widget({
+        style_class: 'screen-shield-background',
+        x: monitor.x,
+        y: monitor.y,
+        width: monitor.width,
+        height: monitor.height,
+    });
+
+    let bgManager = new Background.BackgroundManager({
+        container: widget,
+        monitorIndex,
+        controlPosition: false,
+        settingsSchema: BACKGROUND_SCHEMA,
+    });
+
+    this._bgManagers.push(bgManager);
+
+    this._backgroundGroup.add_child(widget);
+
+    const themeContext = St.ThemeContext.get_for_stage(global.stage);
+
+    let effect = new Shell.BlurEffect({
+        brightness: BLUR_BRIGHTNESS,
+        sigma: BLUR_SIGMA * themeContext.scale_factor,
+    });
+
+    this._scaleChangedId = themeContext.connect('notify::scale-factor', () => {
+        effect.sigma = BLUR_SIGMA * themeContext.scale_factor;
+    });
+
+    widget.add_effect(effect);
+}
+
+function _showClockNew() {
+    if (this._activePage === this._clock)
+        return;
+
+    this._activePage = this._clock;
+
+    let children = this._backgroundGroup.get_children();
+    children.forEach( child => {
+        let effects = child.get_effects();
+        if (effects.length > 0) {
+            child.myEffect = effects[0];
+            child.remove_effect(child.myEffect);
         }
+    });
 
-        this._dialog = new constructor(this._lockDialogGroup);
+    this._adjustment.ease(0, {
+        duration: CROSSFADE_TIME,
+        mode: Clutter.AnimationMode.EASE_OUT_QUAD,
+        onComplete: () => this._maybeDestroyAuthPrompt(),
+    });
+}
 
-        if (themeBackground) {
-            this._dialog._promptBox.style = 'background-color: rgba(65, 71, 72, 0.5);'
-                                            + 'border-radius: 8px;'
-                                            + 'border: 8px';
-        }
+function _showPromptNew() {
+    this._ensureAuthPrompt();
 
-        if (themeTextDark) {
-            if (this._dialog._authPrompt._userWell.get_child().get_children().length >=1) {
-                //user label
-                let userLabel = this._dialog._authPrompt._userWell.get_child().get_children()[1];
-                userLabel._userNameLabel.set_style('color: %s;'.format(COLOR));
-                userLabel._realNameLabel.set_style('color: %s;'.format(COLOR));
+    if (this._activePage === this._promptBox)
+        return;
 
-                //user icon
-                let userIcon = this._dialog._authPrompt._userWell.get_child().get_children()[0];
-                userIcon.set_style('color: %s; border: 2px solid %s;'.format(COLOR, COLOR));
-            }
+    this._activePage = this._promptBox;
 
-            //password label
-            this._dialog._authPrompt._label.set_style('color: %s;'.format(COLOR));
+    let children = this._backgroundGroup.get_children();
+    children.forEach( child => {
+        if (child.get_effects().length == 0)
+            child.add_effect(child.myEffect);
+    });
 
-            //other user label
-            this._dialog._otherUserButton.get_child().set_style('color:%s;'.format(COLOR));
-        }
-
-        let time = global.get_current_time();
-        if (!this._dialog.open(time, onPrimary)) {
-            // This is kind of an impossible error: we're already modal
-            // by the time we reach this...
-            log('Could not open login dialog: failed to acquire grab');
-            this.deactivate(true);
-            return false;
-        }
-
-        this._dialog.connect('failed', this._onUnlockFailed.bind(this));
-    }
-
-    this._dialog.allowCancel = allowCancel;
-    return true;
+    this._adjustment.ease(1, {
+        duration: CROSSFADE_TIME,
+        mode: Clutter.AnimationMode.EASE_OUT_QUAD,
+    });
 }
 
 class DialogBackground {
     constructor() {
-        this._gsettings = Convenience.getSettings(BACKGROUND_SCHEMA);
+        this._gsettings = ExtensionUtils.getSettings(BACKGROUND_SCHEMA);
 
         Background.BackgroundSource = newBackgroundSource;
 
-        this._ensureUnlockDialogOrigin = Main.screenShield._ensureUnlockDialog;
+        this._createBackground = UnlockDialog.UnlockDialog.prototype._createBackground;
+        this._showClock = UnlockDialog.UnlockDialog.prototype._showClock;
+        this._showPrompt = UnlockDialog.UnlockDialog.prototype._showPrompt;
 
         this.connect_signal();
         this._switchChanged();
     }
 
-    _createDialogBackground(monitorIndex) {
-        let monitor = Main.layoutManager.monitors[monitorIndex];
-        let widget = new St.Widget({ style_class: 'screen-shield-background',
-                                     x: monitor.x,
-                                     y: monitor.y,
-                                     width: monitor.width,
-                                     height: monitor.height });
-
-        let bgManager = new Background.BackgroundManager({ container: widget,
-                                                           monitorIndex: monitorIndex,
-                                                           controlPosition: false,
-                                                           settingsSchema: BACKGROUND_SCHEMA });
-
-        Main.screenShield._bgDialogManagers.push(bgManager);
-
-        Main.screenShield._backgroundDialogGroup.add_child(widget);
-    }
-
-    _updateDialogBackgrounds() {
-        for (let i = 0; i < Main.screenShield._bgDialogManagers.length; i++)
-            Main.screenShield._bgDialogManagers[i].destroy();
-
-        Main.screenShield._bgDialogManagers = [];
-        Main.screenShield._backgroundDialogGroup.destroy_all_children();
-
-        for (let i = 0; i < Main.layoutManager.monitors.length; i++)
-            this._createDialogBackground(i);
-    }
-
     _switchChanged() {
         this._enable = this._gsettings.get_boolean('switch');
         if (this._enable) {
-            Main.screenShield._ensureUnlockDialog = _ensureUnlockDialogNew;
-            Main.screenShield._backgroundDialogGroup = new Clutter.Actor();
-            Main.screenShield._lockDialogGroup.add_actor(Main.screenShield._backgroundDialogGroup);
-            Main.screenShield._backgroundDialogGroup.lower_bottom();
-            Main.screenShield._bgDialogManagers = [];
-
-            this._updateDialogBackgrounds();
-            this._updateDialogBackgroundId = Main.layoutManager.connect('monitors-changed', this._updateDialogBackgrounds.bind(this));
+            UnlockDialog.UnlockDialog.prototype._createBackground = _createBackgroundNew;
+            UnlockDialog.UnlockDialog.prototype._showClock = _showClockNew;
+            UnlockDialog.UnlockDialog.prototype._showPrompt = _showPromptNew;
         } else {
-            Main.screenShield._ensureUnlockDialog = this._ensureUnlockDialogOrigin;
-
-            if (Main.screenShield._backgroundDialogGroup == null)
-                return;
-
-            for (let i = 0; i < Main.screenShield._bgDialogManagers.length; i++)
-                Main.screenShield._bgDialogManagers[i].destroy();
-
-            Main.screenShield._bgDialogManagers = [];
-            Main.screenShield._backgroundDialogGroup.destroy_all_children();
-            Main.screenShield._backgroundDialogGroup.destroy();
-            Main.screenShield._backgroundDialogGroup = null;
-
-            if (this._updateDialogBackgroundId != null) {
-                Main.layoutManager.disconnect(this._updateDialogBackgroundId);
-                this._updateDialogBackgroundId = null;
-            }
+            UnlockDialog.UnlockDialog.prototype._createBackground = this._createBackground;
+            UnlockDialog.UnlockDialog.prototype._showClock = this._showClock;
+            UnlockDialog.UnlockDialog.prototype._showPrompt = this._showPrompt;
         }
+
+        if (Main.screenShield._dialog)
+            Main.screenShield._dialog._updateBackgrounds();
     }
 
     connect_signal() {
@@ -168,20 +142,23 @@ class DialogBackground {
 }
 
 let background;
-let themeBackground;
-let themeTextDark;
 let gsettings;
+let _startupPreparedId;
 
-function init() {
-    gsettings = Convenience.getSettings(BACKGROUND_SCHEMA);
+function enableMe() {
+    if (_startupPreparedId)
+        Main.layoutManager.disconnect(_startupPreparedId);
 
-    themeTextDark = gsettings.get_boolean('theme-text-dark');
-    themeBackground = gsettings.get_boolean('theme-background');
-
-    gsettings.connect("changed::theme-background", () => { themeBackground = gsettings.get_boolean('theme-background'); });
-    gsettings.connect("changed::theme-text-dark", () => { themeTextDark = gsettings.get_boolean('theme-text-dark'); });
+    gsettings = ExtensionUtils.getSettings(BACKGROUND_SCHEMA);
 
     background = new DialogBackground();
+}
+
+function init() {
+    if (Main.layoutManager._startingUp)
+        _startupPreparedId = Main.layoutManager.connect('startup-complete', () => enableMe());
+    else
+        enableMe();
 }
 
 function enable() {
@@ -189,3 +166,4 @@ function enable() {
 
 function disable() {
 }
+

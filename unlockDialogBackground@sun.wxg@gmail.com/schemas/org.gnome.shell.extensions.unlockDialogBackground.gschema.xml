@@ -22,18 +22,6 @@
       <description>
       </description>
     </key>
-    <key name="theme-background" type="b">
-      <default>false</default>
-      <summary>Key to enable semitransparent background</summary>
-      <description>
-      </description>
-    </key>
-    <key name="theme-text-dark" type="b">
-      <default>false</default>
-      <summary>Key to enable dark text</summary>
-      <description>
-      </description>
-    </key>
     <key name="picture-uri" type="s">
       <default>'/path/to/picture'</default>
       <summary>Picture URI</summary>
