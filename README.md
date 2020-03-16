@@ -15,4 +15,4 @@ restart system
 
 https://extensions.gnome.org/extension/1476/unlock-dialog-background/
 
-![screenshot](/screenshot.png)
+![screenshot](/screenshot.gif)
