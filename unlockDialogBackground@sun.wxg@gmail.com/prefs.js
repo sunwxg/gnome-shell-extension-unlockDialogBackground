@@ -1,4 +1,5 @@
 const GLib = imports.gi.GLib;
+const Gio = imports.gi.Gio;
 const Gtk = imports.gi.Gtk;
 const GdkPixbuf = imports.gi.GdkPixbuf;
 const Gdk = imports.gi.Gdk;
@@ -82,7 +83,7 @@ class PrefsWidget {
 
     showFileChooserDialog() {
         let fileChooser = new Gtk.FileChooserDialog({ title: "Select File" });
-        fileChooser.set_transient_for(this.widget.get_parent());
+        fileChooser.set_transient_for(this.widget.get_parent().get_parent());
         fileChooser.set_default_response(1);
 
         let filter = new Gtk.FileFilter();
@@ -96,8 +97,11 @@ class PrefsWidget {
         fileChooser.set_preview_widget(preview_image);
 
         fileChooser.connect('update-preview', (dialog) => {
-        dialog.set_preview_widget_active(false);
-            let file = fileChooser.get_uris();
+            dialog.set_preview_widget_active(false);
+            let file = fileChooser.get_file();
+            if (file.query_file_type(Gio.FileQueryInfoFlags.NONE, null) == Gio.FileType.DIRECTORY)
+                return;
+            file = fileChooser.get_uris();
             if (file.length > 0 && file[0].startsWith("file://")) {
                 file = decodeURIComponent(file[0].substring(7));
             } else {
