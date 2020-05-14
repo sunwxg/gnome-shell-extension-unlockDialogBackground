@@ -3,8 +3,6 @@ const Gio = imports.gi.Gio;
 const Gtk = imports.gi.Gtk;
 const GdkPixbuf = imports.gi.GdkPixbuf;
 const Gdk = imports.gi.Gdk;
-const Clutter = imports.gi.Clutter;
-const Cairo = imports.cairo;
 
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me = imports.misc.extensionUtils.getCurrentExtension();
