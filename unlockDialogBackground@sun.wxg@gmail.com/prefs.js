@@ -34,8 +34,6 @@ class PrefsWidget {
         });
         this.vbox.set_size_request(550, 650);
 
-        this.addBoldTextToBox("Enable and disable unblank function", this.vbox);
-        this.vbox.add(new Gtk.HSeparator({margin_bottom: 5, margin_top: 5}));
         this.vbox.add(this.addSwitch());
 
         this.addBoldTextToBox("Change background", this.vbox);
@@ -48,7 +46,7 @@ class PrefsWidget {
 
     addSwitch() {
         let hbox = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, margin_top: 5 });
-        let setting_label = new Gtk.Label({ label: "Open Unlock Dialog Background", xalign: 0 });
+        let setting_label = new Gtk.Label({ label: "Enable function", xalign: 0 });
         this.setting_switch = new Gtk.Switch({ active: this.gsettings.get_boolean('switch') });
 
         this.setting_switch.connect('notify::active', (button) => { this.gsettings.set_boolean('switch', button.active); });
