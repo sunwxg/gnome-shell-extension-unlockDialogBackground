@@ -95,7 +95,7 @@ class PrefsWidget {
         fileChooser.connect('update-preview', (dialog) => {
             dialog.set_preview_widget_active(false);
             let file = fileChooser.get_file();
-            if (file.query_file_type(Gio.FileQueryInfoFlags.NONE, null) == Gio.FileType.DIRECTORY)
+            if (file && file.query_file_type(Gio.FileQueryInfoFlags.NONE, null) == Gio.FileType.DIRECTORY)
                 return;
             file = fileChooser.get_uris();
             if (file.length > 0 && file[0].startsWith("file://")) {
