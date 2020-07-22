@@ -36,6 +36,7 @@ function _createBackgroundNew(monitorIndex) {
         y: monitor.y,
         width: monitor.width,
         height: monitor.height,
+        effect: new Shell.BlurEffect({ name: 'blur' }),
     });
 
     let bgManager = new Background.BackgroundManager({
@@ -48,19 +49,6 @@ function _createBackgroundNew(monitorIndex) {
     this._bgManagers.push(bgManager);
 
     this._backgroundGroup.add_child(widget);
-
-    const themeContext = St.ThemeContext.get_for_stage(global.stage);
-
-    let effect = new Shell.BlurEffect({
-        brightness: BLUR_BRIGHTNESS,
-        sigma: BLUR_SIGMA * themeContext.scale_factor,
-    });
-
-    this._scaleChangedId = themeContext.connect('notify::scale-factor', () => {
-        effect.sigma = BLUR_SIGMA * themeContext.scale_factor;
-    });
-
-    widget.add_effect(effect);
 }
 
 function _showClockNew() {
