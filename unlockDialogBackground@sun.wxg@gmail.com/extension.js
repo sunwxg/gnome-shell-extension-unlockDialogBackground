@@ -3,8 +3,6 @@
 const { Clutter, Gio, GLib, Shell, St, Gdk, Gtk } = imports.gi;
 
 const Main = imports.ui.main;
-const MessageTray = imports.ui.messageTray;
-const Tweener = imports.ui.tweener;
 const UnlockDialog = imports.ui.unlockDialog
 
 const ExtensionUtils = imports.misc.extensionUtils;
