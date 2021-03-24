@@ -14,8 +14,6 @@ function init() {
 
 function buildPrefsWidget() {
     let widget = new PrefsWidget();
-    widget.widget.show_all();
-
     return widget.widget;
 }
 
@@ -25,54 +23,58 @@ class PrefsWidget {
 
         this.widget = new Gtk.Box({
             orientation: Gtk.Orientation.VERTICAL,
-            border_width: 10
+            margin_top: 10,
+            margin_bottom: 10,
+            margin_start: 10,
+            margin_end: 10,
         });
 
         this.vbox = new Gtk.Box({
             orientation: Gtk.Orientation.VERTICAL,
-            margin: 20, margin_top: 0
+            margin_top: 0,
+            hexpand: true,
         });
         this.vbox.set_size_request(550, 650);
 
-        this.vbox.add(this.addSwitch());
+        this.vbox.append(this.addSwitch());
 
         this.addBoldTextToBox("Change background", this.vbox);
-        this.vbox.add(new Gtk.HSeparator({margin_bottom: 5, margin_top: 5}));
-        this.vbox.add(this.addPictureUrl());
-        this.vbox.add(this.addPictureShow());
+        this.vbox.append(new Gtk.Separator({ orientation: Gtk.Orientation.HORIZONTAL, margin_bottom: 5, margin_top: 5}));
+        this.vbox.append(this.addPictureUrl());
+        this.vbox.append(this.addPictureShow());
 
-        this.widget.add(this.vbox);
+        this.widget.append(this.vbox);
     }
 
     addSwitch() {
         let hbox = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, margin_top: 5 });
-        let setting_label = new Gtk.Label({ label: "Enable function", xalign: 0 });
+        let setting_label = new Gtk.Label({ label: "Enable function", xalign: 0, hexpand: true });
         this.setting_switch = new Gtk.Switch({ active: this.gsettings.get_boolean('switch') });
 
         this.setting_switch.connect('notify::active', (button) => { this.gsettings.set_boolean('switch', button.active); });
 
-        hbox.pack_start(setting_label, true, true, 0);
-        hbox.add(this.setting_switch);
+        hbox.append(setting_label);
+        hbox.append(this.setting_switch);
 
         return hbox;
     }
 
     addPictureUrl() {
         let hbox = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, margin_top: 5 });
-        let setting_label = new Gtk.Label({ label: "Picture", xalign: 0 });
-        this.setting_entry = new Gtk.Entry({ hexpand: true, margin_left: 20 });
+        let setting_label = new Gtk.Label({ label: "Picture", xalign: 0, hexpand: true });
+        this.setting_entry = new Gtk.Entry({ hexpand: true, margin_start: 20 });
 
         this.setting_entry.set_text(this.gsettings.get_string('picture-uri'));
         this.setting_entry.connect('changed', (entry) => { this.gsettings.set_string('picture-uri', entry.get_text()); });
 
-        this.fileChooseButton = new Gtk.Button({ margin_left: 5 });
+        this.fileChooseButton = new Gtk.Button({ margin_start: 5 });
         this.fileChooseButton.set_label("Browse");
         this.fileChooseButton.connect("clicked", this.showFileChooserDialog.bind(this));
 
 
-        hbox.pack_start(setting_label, false, true, 0);
-        hbox.add(this.setting_entry);
-        hbox.add(this.fileChooseButton);
+        hbox.append(setting_label);
+        hbox.append(this.setting_entry);
+        hbox.append(this.fileChooseButton);
 
         return hbox;
     }
@@ -86,58 +88,34 @@ class PrefsWidget {
         filter.add_pixbuf_formats();
         fileChooser.filter = filter;
 
-        fileChooser.add_button("Cancel", Gtk.ResponseType.CANCEL);
         fileChooser.add_button("Open", Gtk.ResponseType.ACCEPT);
 
-        let preview_image = new Gtk.Image();
-        fileChooser.set_preview_widget(preview_image);
-
-        fileChooser.connect('update-preview', (dialog) => {
-            dialog.set_preview_widget_active(false);
-            let file = fileChooser.get_file();
-            if (file && file.query_file_type(Gio.FileQueryInfoFlags.NONE, null) == Gio.FileType.DIRECTORY)
-                return;
-            file = fileChooser.get_uris();
-            if (file.length > 0 && file[0].startsWith("file://")) {
-                file = decodeURIComponent(file[0].substring(7));
-            } else {
-                return;
+        fileChooser.connect("response", (dialog, response) => {
+            if (response == Gtk.ResponseType.ACCEPT) {
+                let file = dialog.get_file().get_path()
+                if (file.length > 0)
+                    this.setting_entry.set_text(file);
+                fileChooser.destroy();
             }
-            let pixbuf = GdkPixbuf.Pixbuf.new_from_file(file);
-            let maxwidth = 400.0, maxheight = 800.0;
-            let width = pixbuf.get_width(), height = pixbuf.get_height();
-            let scale = Math.min(maxwidth / width, maxheight / height);
-            if (scale < 1) {
-                width = width * scale;
-                height = height * scale;
-                pixbuf = pixbuf.scale_simple(width.toFixed(0), height.toFixed(0), GdkPixbuf.InterpType.BILINEAR);
-            }
-            preview_image.set_from_pixbuf(pixbuf);
-            dialog.set_preview_widget_active(true);
         });
 
-        switch(fileChooser.run()) {
-            case Gtk.ResponseType.CANCEL:
-                fileChooser.destroy();
-                break;
-            case Gtk.ResponseType.ACCEPT:
-                let file = fileChooser.get_uris();
-                if (file.length > 0 && file[0].startsWith("file://"))
-                    this.setting_entry.set_text(decodeURIComponent(file[0].substring(7)));
-                fileChooser.destroy();
-                break;
-            default:
-        }
+        fileChooser.show();
+
     }
 
     addPictureShow() {
-        this.drawArea = new Gtk.DrawingArea({ expand: true });
-        this.drawArea.connect('draw', (widget, cr) => {
+        this.drawArea = new Gtk.DrawingArea({
+            halign: Gtk.Align.CENTER
+        });
+        this.drawArea.set_draw_func( (drawArea, cr, width, height) => {
+            if (!GLib.file_test(this.setting_entry.get_text(), GLib.FileTest.EXISTS))
+                return;
+
             let pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_size(this.setting_entry.get_text(),
                                                                 -1,
-                                                                widget.get_allocated_height());
+                                                                height);
 
-            this.drawArea.set_size_request(pixbuf.get_width(), -1);
+            this.drawArea.set_size_request(this.vbox.get_width(), -1);
 
             Gdk.cairo_set_source_pixbuf(cr, pixbuf, 0, 0);
             cr.paint();
@@ -150,10 +128,11 @@ class PrefsWidget {
 
         let hbox = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL,
                                  margin_top: 10,
-                                 expand:true,
+                                 hexpand:true,
+                                 vexpand:true,
                                  halign:Gtk.Align.CENTER });
 
-        hbox.add(this.drawArea);
+        hbox.append(this.drawArea);
 
         return hbox;
     }
@@ -161,8 +140,8 @@ class PrefsWidget {
     addBoldTextToBox(text, box) {
         let txt = new Gtk.Label({xalign: 0, margin_top: 20});
         txt.set_markup('<b>' + text + '</b>');
-        txt.set_line_wrap(true);
-        box.add(txt);
+        txt.set_wrap(true);
+        box.append(txt);
     }
 }
 
