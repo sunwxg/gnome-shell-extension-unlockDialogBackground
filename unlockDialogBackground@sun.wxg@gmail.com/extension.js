@@ -128,6 +128,7 @@ class DialogBackground {
 
 let background;
 let _startupPreparedId;
+let enabled;
 
 function enableMe() {
     if (_startupPreparedId) {
@@ -136,15 +137,18 @@ function enableMe() {
     }
 
     background.enable();
+    enabled = true;
 }
 
 function init() {
-    background = new DialogBackground();
+    enabled = false;
 }
 
 function enable() {
-    if (background.enabled)
+    if (enabled)
         return;
+
+    background = new DialogBackground();
 
     if (Main.layoutManager._startingUp)
         _startupPreparedId = Main.layoutManager.connect('startup-complete', () => enableMe());
@@ -155,6 +159,8 @@ function enable() {
 function disable() {
     if (!Main.sessionMode.isLocked) {
         background.disable();
+        background = null;
+        enabled = false;
     }
 }
 
