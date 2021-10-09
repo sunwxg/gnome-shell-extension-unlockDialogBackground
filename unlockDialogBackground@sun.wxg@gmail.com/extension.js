@@ -94,62 +94,67 @@ function _showPromptNew() {
 class DialogBackground {
     constructor() {
         this._gsettings = ExtensionUtils.getSettings(BACKGROUND_SCHEMA);
+        this.enabled = false;
 
         Background.BackgroundSource = newBackgroundSource;
 
         this._createBackground = UnlockDialog.UnlockDialog.prototype._createBackground;
         this._showClock = UnlockDialog.UnlockDialog.prototype._showClock;
         this._showPrompt = UnlockDialog.UnlockDialog.prototype._showPrompt;
-
-        this.connect_signal();
-        this._switchChanged();
     }
 
-    _switchChanged() {
-        this._enable = this._gsettings.get_boolean('switch');
-        if (this._enable) {
-            UnlockDialog.UnlockDialog.prototype._createBackground = _createBackgroundNew;
-            UnlockDialog.UnlockDialog.prototype._showClock = _showClockNew;
-            UnlockDialog.UnlockDialog.prototype._showPrompt = _showPromptNew;
-        } else {
-            UnlockDialog.UnlockDialog.prototype._createBackground = this._createBackground;
-            UnlockDialog.UnlockDialog.prototype._showClock = this._showClock;
-            UnlockDialog.UnlockDialog.prototype._showPrompt = this._showPrompt;
-        }
+    enable() {
+        UnlockDialog.UnlockDialog.prototype._createBackground = _createBackgroundNew;
+        UnlockDialog.UnlockDialog.prototype._showClock = _showClockNew;
+        UnlockDialog.UnlockDialog.prototype._showPrompt = _showPromptNew;
 
         if (Main.screenShield._dialog)
             Main.screenShield._dialog._updateBackgrounds();
+
+        this.enabled = true;
     }
 
-    connect_signal() {
-        this._gsettings.connect("changed::switch", this._switchChanged.bind(this));
-    }
+    disable() {
+        UnlockDialog.UnlockDialog.prototype._createBackground = this._createBackground;
+        UnlockDialog.UnlockDialog.prototype._showClock = this._showClock;
+        UnlockDialog.UnlockDialog.prototype._showPrompt = this._showPrompt;
 
+        if (Main.screenShield._dialog)
+            Main.screenShield._dialog._updateBackgrounds();
+
+        this.enabled = false;
+    }
 }
 
 let background;
-let gsettings;
 let _startupPreparedId;
 
 function enableMe() {
-    if (_startupPreparedId)
+    if (_startupPreparedId) {
         Main.layoutManager.disconnect(_startupPreparedId);
+        _startupPreparedId = 0;
+    }
 
-    gsettings = ExtensionUtils.getSettings(BACKGROUND_SCHEMA);
-
-    background = new DialogBackground();
+    background.enable();
 }
 
 function init() {
+    background = new DialogBackground();
+}
+
+function enable() {
+    if (background.enabled)
+        return;
+
     if (Main.layoutManager._startingUp)
         _startupPreparedId = Main.layoutManager.connect('startup-complete', () => enableMe());
     else
         enableMe();
 }
 
-function enable() {
-}
-
 function disable() {
+    if (!Main.sessionMode.isLocked) {
+        background.disable();
+    }
 }
 
