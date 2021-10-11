@@ -128,7 +128,7 @@ class DialogBackground {
 
 let background;
 let _startupPreparedId;
-let enabled;
+let enabled = false;
 
 function enableMe() {
     if (_startupPreparedId) {
@@ -141,7 +141,6 @@ function enableMe() {
 }
 
 function init() {
-    enabled = false;
 }
 
 function enable() {
