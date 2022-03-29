@@ -3,7 +3,8 @@
   "name": "Lock screen background",
   "original-authors": "sun.wxg@gmail.com",
   "shell-version": [
-   "41"
+   "41",
+   "42"
   ],
   "url": "https://github.com/sunwxg/gnome-shell-extension-unlockDialogBackground",
   "uuid": "unlockDialogBackground@sun.wxg@gmail.com"
