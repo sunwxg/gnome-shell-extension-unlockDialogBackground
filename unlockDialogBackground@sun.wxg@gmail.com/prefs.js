@@ -51,6 +51,8 @@ class PrefsWidget {
 
         this.setting_entry.set_text(this.gsettings.get_string('picture-uri'));
         this.setting_entry.connect('changed', (entry) => { this.gsettings.set_string('picture-uri', entry.get_text()); });
+        this.setting_entry.set_text(this.gsettings.get_string('picture-uri-dark'));
+        this.setting_entry.connect('changed', (entry) => { this.gsettings.set_string('picture-uri-dark', entry.get_text()); });
 
         this.fileChooseButton = new Gtk.Button({ margin_start: 5 });
         this.fileChooseButton.set_label("Browse");
@@ -66,7 +68,7 @@ class PrefsWidget {
 
     showFileChooserDialog() {
         let fileChooser = new Gtk.FileChooserDialog({ title: "Select File" });
-        fileChooser.set_transient_for(this.widget.get_parent().get_parent());
+        fileChooser.set_transient_for(this.widget.get_root());
         fileChooser.set_default_response(1);
 
         let filter = new Gtk.FileFilter();

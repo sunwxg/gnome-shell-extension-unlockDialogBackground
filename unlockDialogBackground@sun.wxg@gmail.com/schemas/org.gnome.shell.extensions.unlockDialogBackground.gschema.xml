@@ -30,6 +30,14 @@
         local (file://) URIs.
       </description>
     </key>
+    <key name="picture-uri-dark" type="s">
+      <default>'/path/to/picture'</default>
+      <summary>Picture URI for dark mode</summary>
+      <description>
+        URI to use for the background image. Note that the backend only supports
+        local (file://) URIs.
+      </description>
+    </key>
     <key name="picture-options" enum="org.gnome.shell.extensions.unlockDialogBackground.GDesktopBackgroundStyle">
       <default>'zoom'</default>
       <summary>Picture Options</summary>
