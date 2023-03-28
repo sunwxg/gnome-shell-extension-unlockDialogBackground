@@ -4,7 +4,8 @@
   "original-authors": "sun.wxg@gmail.com",
   "shell-version": [
    "42",
-   "43"
+   "43",
+   "44"
   ],
   "url": "https://github.com/sunwxg/gnome-shell-extension-unlockDialogBackground",
   "uuid": "unlockDialogBackground@sun.wxg@gmail.com"
