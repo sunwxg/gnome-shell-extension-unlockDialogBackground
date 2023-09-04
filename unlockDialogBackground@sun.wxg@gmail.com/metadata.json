@@ -1,12 +1,13 @@
 {
-  "description": "Change lock screen background.\nIf you use Ubuntu, install package gir1.2-clutter-1.0 first.",
+  "uuid": "unlockDialogBackground@sun.wxg@gmail.com",
+  "extension-id": "unlockDialog-Background",
+  "settings-schema": "org.gnome.shell.extensions.unlockDialogBackground",
+  "gettext-domain": "gnome-shell-extensions",
   "name": "Lock screen background",
-  "original-authors": "sun.wxg@gmail.com",
+  "description": "Change lock screen background.",
   "shell-version": [
-   "42",
-   "43",
-   "44"
+    "45"
   ],
-  "url": "https://github.com/sunwxg/gnome-shell-extension-unlockDialogBackground",
-  "uuid": "unlockDialogBackground@sun.wxg@gmail.com"
+  "original-authors": "sun.wxg@gmail.com",
+  "url": "https://github.com/sunwxg/gnome-shell-extension-unlockDialogBackground"
 }

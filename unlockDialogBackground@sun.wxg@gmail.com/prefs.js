@@ -1,25 +1,17 @@
-const GLib = imports.gi.GLib;
-const Gio = imports.gi.Gio;
-const Gtk = imports.gi.Gtk;
-const GdkPixbuf = imports.gi.GdkPixbuf;
-const Gdk = imports.gi.Gdk;
+import Adw from 'gi://Adw';
+import Gio from 'gi://Gio';
+import GObject from 'gi://GObject';
+import Gtk from 'gi://Gtk';
+import Gdk from 'gi://Gdk';
+import GdkPixbuf from 'gi://GdkPixbuf';
 
-const ExtensionUtils = imports.misc.extensionUtils;
-const Me = imports.misc.extensionUtils.getCurrentExtension();
+import {ExtensionPreferences} from 'resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js';
 
-const SCHEMA_NAME = 'org.gnome.shell.extensions.unlockDialogBackground';
-
-function init() {
-}
-
-function buildPrefsWidget() {
-    let widget = new PrefsWidget();
-    return widget.widget;
-}
+const BACKGROUND_SCHEMA = 'org.gnome.desktop.background.lockdialog';
 
 class PrefsWidget {
-    constructor() {
-        this.gsettings = ExtensionUtils.getSettings(SCHEMA_NAME);
+    constructor(settings) {
+        this.gsettings = settings;
 
         this.widget = new Gtk.Box({
             orientation: Gtk.Orientation.VERTICAL,
@@ -132,3 +124,9 @@ class PrefsWidget {
     }
 }
 
+export default class UnlockDialogBackgroundPrefs extends ExtensionPreferences {
+    getPreferencesWidget() {
+        let widget = new PrefsWidget(this.getSettings());
+        return widget.widget;
+    }
+}
