@@ -152,6 +152,11 @@ export default class PanelScrollExtension extends Extension {
             this.enabled = false;
             this._settings = null;
             dir = null;
+
+            if (this._startupPreparedId) {
+                Main.layoutManager.disconnect(this._startupPreparedId);
+                this._startupPreparedId = 0;
+            }
         }
     }
 
