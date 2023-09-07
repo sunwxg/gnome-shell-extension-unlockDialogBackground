@@ -147,6 +147,7 @@ export default class PanelScrollExtension extends Extension {
     }
 
     disable() {
+        // This extension controls the lock screen background, so it cannot be disabled on unlock dialog
         if (!Main.sessionMode.isLocked) {
             this.background.disable();
             this.enabled = false;
