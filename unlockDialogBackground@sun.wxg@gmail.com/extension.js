@@ -11,15 +11,19 @@ import St from 'gi://St';
 import {Extension, gettext as _} from 'resource:///org/gnome/shell/extensions/extension.js';
 
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
-import * as UnlockDialog from 'resource:///org/gnome/shell/ui/unlockDialog.js';
 import * as Layout from 'resource:///org/gnome/shell/ui/layout.js';
 import * as BackgroundNew from './backgroundNew.js';
+import { UnlockDialog } from 'resource:///org/gnome/shell/ui/unlockDialog.js';
 
-const BLUR_BRIGHTNESS = 0.55;
-const BLUR_SIGMA = 60;
 const CROSSFADE_TIME = 300;
+const DEFAULT_SIGMA = 30;
+const DEFAULT_BRIGHTNESS = 0.65;
+const KEY_SIGMA = 'sigma';
+const KEY_BRIGHTNESS = 'brightness';
 
 let dir = null;
+let sigma;
+let brightness;
 
 function _createBackgroundNew(monitorIndex) {
     let monitor = Main.layoutManager.monitors[monitorIndex];
@@ -50,14 +54,16 @@ function _showClockNew() {
 
     this._activePage = this._clock;
 
-    let children = this._backgroundGroup.get_children();
-    children.forEach( child => {
-        let effects = child.get_effects();
-        if (effects.length > 0) {
-            child.myEffect = effects[0];
-            child.remove_effect(child.myEffect);
+    for (const widget of this._backgroundGroup) {
+        const blur_effect = widget.get_effect('blur');
+
+        if (blur_effect) {
+            blur_effect.set({
+                brightness: brightness,
+                sigma: sigma,
+            });
         }
-    });
+    }
 
     this._adjustment.ease(0, {
         duration: CROSSFADE_TIME,
@@ -74,11 +80,16 @@ function _showPromptNew() {
 
     this._activePage = this._promptBox;
 
-    let children = this._backgroundGroup.get_children();
-    children.forEach( child => {
-        if (child.get_effects().length == 0)
-            child.add_effect(child.myEffect);
-    });
+    for (const widget of this._backgroundGroup) {
+        const blur_effect = widget.get_effect('blur');
+
+        if (blur_effect) {
+            blur_effect.set({
+                brightness: DEFAULT_BRIGHTNESS,
+                sigma: DEFAULT_SIGMA,
+            });
+        }
+    }
 
     this._adjustment.ease(1, {
         duration: CROSSFADE_TIME,
@@ -88,22 +99,27 @@ function _showPromptNew() {
 
 class DialogBackground {
     constructor(settings) {
-        this._gsettings = settings;
         this.enabled = false;
+        this.settings = settings;
 
-        //Background.BackgroundSource = newBackgroundSource;
+        this._createBackground = UnlockDialog.prototype._createBackground;
+        this._showClock = UnlockDialog.prototype._showClock;
+        this._showPrompt = UnlockDialog.prototype._showPrompt;
 
-        //this._createBackgroundManager = Layout.LayoutManager.prototype._createBackgroundManager;
-        this._createBackground = UnlockDialog.UnlockDialog.prototype._createBackground;
-        this._showClock = UnlockDialog.UnlockDialog.prototype._showClock;
-        this._showPrompt = UnlockDialog.UnlockDialog.prototype._showPrompt;
+        sigma = this.settings.get_int(KEY_SIGMA);
+        this.sigmaID = this.settings.connect("changed::" + KEY_SIGMA, () => {
+            sigma = this.settings.get_int(KEY_SIGMA);
+        })
+        brightness = this.settings.get_double(KEY_BRIGHTNESS);
+        this.brightnessID = this.settings.connect("changed::" + KEY_BRIGHTNESS, () => {
+            brightness = this.settings.get_double(KEY_BRIGHTNESS);
+        })
     }
 
     enable() {
-        //Layout.LayoutManager.prototype._createBackgroundManager = _createBackgroundManagerNew;
-        UnlockDialog.UnlockDialog.prototype._createBackground = _createBackgroundNew;
-        UnlockDialog.UnlockDialog.prototype._showClock = _showClockNew;
-        UnlockDialog.UnlockDialog.prototype._showPrompt = _showPromptNew;
+        UnlockDialog.prototype._createBackground = _createBackgroundNew;
+        UnlockDialog.prototype._showClock = _showClockNew;
+        UnlockDialog.prototype._showPrompt = _showPromptNew;
 
         if (Main.screenShield._dialog)
             Main.screenShield._dialog._updateBackgrounds();
@@ -112,19 +128,25 @@ class DialogBackground {
     }
 
     disable() {
-        //Layout.LayoutManager.prototype._createBackgroundManager = this._createBackgroundManager
-        UnlockDialog.UnlockDialog.prototype._createBackground = this._createBackground;
-        UnlockDialog.UnlockDialog.prototype._showClock = this._showClock;
-        UnlockDialog.UnlockDialog.prototype._showPrompt = this._showPrompt;
+        UnlockDialog.prototype._createBackground = this._createBackground;
+        UnlockDialog.prototype._showClock = this._showClock;
+        UnlockDialog.prototype._showPrompt = this._showPrompt;
 
         if (Main.screenShield._dialog)
             Main.screenShield._dialog._updateBackgrounds();
 
         this.enabled = false;
     }
+
+    destroy() {
+        if (this.sigmaID)
+            this.settings.disconnect(this.sigmaID);
+        if (this.brightnessID)
+            this.settings.disconnect(this.brightnessID);
+    }
 }
 
-export default class PanelScrollExtension extends Extension {
+export default class unlockDialogBackgroundExtension extends Extension {
     constructor(metadata) {
         super(metadata);
 
@@ -133,12 +155,10 @@ export default class PanelScrollExtension extends Extension {
     }
 
     enable() {
-        this._settings = this.getSettings();
-
         if (this.enabled)
             return;
 
-        this.background = new DialogBackground();
+        this.background = new DialogBackground(this.getSettings());
 
         if (Main.layoutManager._startingUp)
             this._startupPreparedId = Main.layoutManager.connect('startup-complete', () => this.enableMe());
@@ -151,7 +171,6 @@ export default class PanelScrollExtension extends Extension {
         if (!Main.sessionMode.isLocked) {
             this.background.disable();
             this.enabled = false;
-            this._settings = null;
             dir = null;
 
             if (this._startupPreparedId) {

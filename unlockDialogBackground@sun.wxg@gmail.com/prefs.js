@@ -31,6 +31,8 @@ class PrefsWidget {
 
         this.addBoldTextToBox("Change background", this.vbox);
         this.vbox.append(new Gtk.Separator({ orientation: Gtk.Orientation.HORIZONTAL, margin_bottom: 5, margin_top: 5}));
+        this.vbox.append(this.addAdjustBlur());
+        this.vbox.append(this.addAdjustBrightness());
         this.vbox.append(this.addPictureUrl());
         this.vbox.append(this.addPictureShow());
 
@@ -122,6 +124,68 @@ class PrefsWidget {
         txt.set_markup('<b>' + text + '</b>');
         txt.set_wrap(true);
         box.append(txt);
+    }
+
+    addAdjustBlur() {
+        let hbox = new Gtk.Box({orientation: Gtk.Orientation.HORIZONTAL, margin_top: 5});
+        let blurLabel = new Gtk.Label({label: 'Adjust Sigma', xalign: 0, hexpand: true});
+
+        this.blur_adjustment = new Gtk.Adjustment({
+            lower: 0,
+            'step-increment': 1,
+            'page-increment': 5,
+            upper: 100,
+        });
+
+        this.blur_scale = new Gtk.Scale({
+            hexpand: true,
+            'draw-value': true,
+            'value-pos': 'left',
+            'can-focus': true,
+            digits: 0,
+            adjustment: this.blur_adjustment,
+        });
+
+        this.blur_scale.set_value(this.gsettings.get_int('sigma'));
+        this.blur_scale.connect('value-changed', entry => {
+            this.gsettings.set_int('sigma', entry.get_value());
+        });
+
+        hbox.append(blurLabel);
+        hbox.append(this.blur_scale);
+
+        return hbox;
+    }
+
+    addAdjustBrightness() {
+        let hbox = new Gtk.Box({orientation: Gtk.Orientation.HORIZONTAL, margin_top: 5});
+        let brightnessLabel = new Gtk.Label({label: 'Adjust Brightness', xalign: 0, hexpand: true});
+
+        this.brightness_adjustment = new Gtk.Adjustment({
+            lower: 0,
+            'step-increment': 0.05,
+            'page-increment': 0.1,
+            upper: 1,
+        });
+
+        this.brightness_scale = new Gtk.Scale({
+            hexpand: true,
+            'draw-value': true,
+            'value-pos': 'left',
+            'can-focus': true,
+            digits: 2,
+            adjustment: this.brightness_adjustment,
+        });
+
+        this.brightness_scale.set_value(this.gsettings.get_double('brightness'));
+        this.brightness_scale.connect('value-changed', entry => {
+            this.gsettings.set_double('brightness', entry.get_value());
+        });
+
+        hbox.append(brightnessLabel);
+        hbox.append(this.brightness_scale);
+
+        return hbox;
     }
 }
 
