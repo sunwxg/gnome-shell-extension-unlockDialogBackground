@@ -33,8 +33,15 @@ function _createBackgroundNew(monitorIndex) {
         y: monitor.y,
         width: monitor.width,
         height: monitor.height,
-        effect: new Shell.BlurEffect({ name: 'blur' }),
     });
+
+    let blur_effect = new Shell.BlurEffect({
+        name: 'blur',
+        sigma: sigma,
+        brightness: brightness,
+    });
+    blur_effect.set_enabled(false);
+    widget.add_effect(blur_effect);
 
     let bgManager = new BackgroundNew.BackgroundManager({
         container: widget,
@@ -56,11 +63,11 @@ function _showClockNew() {
 
     for (const widget of this._backgroundGroup) {
         const blur_effect = widget.get_effect('blur');
-
+        blur_effect.set_enabled(true);
         if (blur_effect) {
             blur_effect.set({
-                brightness: brightness,
                 sigma: sigma,
+                brightness: brightness,
             });
         }
     }
@@ -82,11 +89,11 @@ function _showPromptNew() {
 
     for (const widget of this._backgroundGroup) {
         const blur_effect = widget.get_effect('blur');
-
+        blur_effect.set_enabled(true);
         if (blur_effect) {
             blur_effect.set({
-                brightness: DEFAULT_BRIGHTNESS,
                 sigma: DEFAULT_SIGMA,
+                brightness: DEFAULT_BRIGHTNESS,
             });
         }
     }
@@ -99,7 +106,6 @@ function _showPromptNew() {
 
 class DialogBackground {
     constructor(settings) {
-        this.enabled = false;
         this.settings = settings;
 
         this._createBackground = UnlockDialog.prototype._createBackground;
@@ -123,8 +129,6 @@ class DialogBackground {
 
         if (Main.screenShield._dialog)
             Main.screenShield._dialog._updateBackgrounds();
-
-        this.enabled = true;
     }
 
     disable() {
@@ -135,12 +139,9 @@ class DialogBackground {
         if (Main.screenShield._dialog)
             Main.screenShield._dialog._updateBackgrounds();
 
-        this.enabled = false;
-    }
-
-    destroy() {
         if (this.sigmaID)
             this.settings.disconnect(this.sigmaID);
+
         if (this.brightnessID)
             this.settings.disconnect(this.brightnessID);
     }
@@ -150,14 +151,11 @@ export default class unlockDialogBackgroundExtension extends Extension {
     constructor(metadata) {
         super(metadata);
 
-        this.enabled = false;
         this._startupPreparedId = 0;
     }
 
     enable() {
-        if (this.enabled)
-            return;
-
+        dir = this.dir;
         this.background = new DialogBackground(this.getSettings());
 
         if (Main.layoutManager._startingUp)
@@ -168,15 +166,12 @@ export default class unlockDialogBackgroundExtension extends Extension {
 
     disable() {
         // This extension controls the lock screen background, so it cannot be disabled on unlock dialog
-        if (!Main.sessionMode.isLocked) {
-            this.background.disable();
-            this.enabled = false;
-            dir = null;
+        this.background.disable();
+        dir = null;
 
-            if (this._startupPreparedId) {
-                Main.layoutManager.disconnect(this._startupPreparedId);
-                this._startupPreparedId = 0;
-            }
+        if (this._startupPreparedId) {
+            Main.layoutManager.disconnect(this._startupPreparedId);
+            this._startupPreparedId = 0;
         }
     }
 
@@ -186,8 +181,6 @@ export default class unlockDialogBackgroundExtension extends Extension {
             this._startupPreparedId = 0;
         }
 
-        dir = this.dir;
         this.background.enable();
-        this.enabled = true;
     }
 }
