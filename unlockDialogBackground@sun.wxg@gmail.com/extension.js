@@ -3,8 +3,6 @@
 import Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
-import Gtk from 'gi://Gtk';
-import Gdk from 'gi://Gdk';
 import Shell from 'gi://Shell';
 import St from 'gi://St';
 
