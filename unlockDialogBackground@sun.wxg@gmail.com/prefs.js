@@ -128,7 +128,7 @@ class PrefsWidget {
 
     addAdjustBlur() {
         let hbox = new Gtk.Box({orientation: Gtk.Orientation.HORIZONTAL, margin_top: 5});
-        let blurLabel = new Gtk.Label({label: 'Adjust Sigma', xalign: 0, hexpand: true});
+        let blurLabel = new Gtk.Label({label: 'Adjust Radius', xalign: 0, hexpand: true});
 
         this.blur_adjustment = new Gtk.Adjustment({
             lower: 0,
@@ -146,9 +146,9 @@ class PrefsWidget {
             adjustment: this.blur_adjustment,
         });
 
-        this.blur_scale.set_value(this.gsettings.get_int('sigma'));
+        this.blur_scale.set_value(this.gsettings.get_int('radius'));
         this.blur_scale.connect('value-changed', entry => {
-            this.gsettings.set_int('sigma', entry.get_value());
+            this.gsettings.set_int('radius', entry.get_value());
         });
 
         hbox.append(blurLabel);

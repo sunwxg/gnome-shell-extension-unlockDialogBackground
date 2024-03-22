@@ -14,13 +14,13 @@ import * as BackgroundNew from './backgroundNew.js';
 import { UnlockDialog } from 'resource:///org/gnome/shell/ui/unlockDialog.js';
 
 const CROSSFADE_TIME = 300;
-const DEFAULT_SIGMA = 30;
+const DEFAULT_RADIUS = 30;
 const DEFAULT_BRIGHTNESS = 0.65;
-const KEY_SIGMA = 'sigma';
+const KEY_RADIUS = 'radius';
 const KEY_BRIGHTNESS = 'brightness';
 
 let dir = null;
-let sigma;
+let radius;
 let brightness;
 
 function _createBackgroundNew(monitorIndex) {
@@ -35,7 +35,7 @@ function _createBackgroundNew(monitorIndex) {
 
     let blur_effect = new Shell.BlurEffect({
         name: 'blur',
-        sigma: sigma,
+        radius: radius,
         brightness: brightness,
     });
     blur_effect.set_enabled(false);
@@ -64,7 +64,7 @@ function _showClockNew() {
         blur_effect.set_enabled(true);
         if (blur_effect) {
             blur_effect.set({
-                sigma: sigma,
+                radius: radius,
                 brightness: brightness,
             });
         }
@@ -90,7 +90,7 @@ function _showPromptNew() {
         blur_effect.set_enabled(true);
         if (blur_effect) {
             blur_effect.set({
-                sigma: DEFAULT_SIGMA,
+                radius: DEFAULT_RADIUS,
                 brightness: DEFAULT_BRIGHTNESS,
             });
         }
@@ -110,9 +110,9 @@ class DialogBackground {
         this._showClock = UnlockDialog.prototype._showClock;
         this._showPrompt = UnlockDialog.prototype._showPrompt;
 
-        sigma = this.settings.get_int(KEY_SIGMA);
-        this.sigmaID = this.settings.connect("changed::" + KEY_SIGMA, () => {
-            sigma = this.settings.get_int(KEY_SIGMA);
+        radius = this.settings.get_int(KEY_RADIUS);
+        this.radiusID = this.settings.connect("changed::" + KEY_RADIUS, () => {
+            radius = this.settings.get_int(KEY_RADIUS);
         })
         brightness = this.settings.get_double(KEY_BRIGHTNESS);
         this.brightnessID = this.settings.connect("changed::" + KEY_BRIGHTNESS, () => {
@@ -137,8 +137,8 @@ class DialogBackground {
         if (Main.screenShield._dialog)
             Main.screenShield._dialog._updateBackgrounds();
 
-        if (this.sigmaID)
-            this.settings.disconnect(this.sigmaID);
+        if (this.radiusID)
+            this.settings.disconnect(this.radiusID);
 
         if (this.brightnessID)
             this.settings.disconnect(this.brightnessID);
