@@ -6,7 +6,6 @@
   "name": "Lock screen background",
   "description": "Change lock screen background.",
   "shell-version": [
-    "46",
     "47"
   ],
   "session-modes": ["user", "unlock-dialog"],
