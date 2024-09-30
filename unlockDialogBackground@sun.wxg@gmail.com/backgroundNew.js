@@ -8,13 +8,12 @@ import GObject from 'gi://GObject';
 import GnomeBG from 'gi://GnomeBG';
 import GnomeDesktop from 'gi://GnomeDesktop';
 import Meta from 'gi://Meta';
+import Cogl from 'gi://Cogl';
 
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as LoginManager from 'resource:///org/gnome/shell/misc/loginManager.js';
 import * as Params from 'resource:///org/gnome/shell/misc/params.js';
 import * as Signals from 'resource:///org/gnome/shell/misc/signals.js';
-
-const DEFAULT_BACKGROUND_COLOR = Clutter.Color.from_pixel(0x2e3436ff);
 
 const BACKGROUND_SCHEMA = 'org.gnome.shell.extensions.unlockDialogBackground';
 //const BACKGROUND_SCHEMA = 'org.gnome.desktop.background';
@@ -275,9 +274,9 @@ const Background = GObject.registerClass({
         let colorString, res_, color, secondColor;
 
         colorString = this._settings.get_string(PRIMARY_COLOR_KEY);
-        [res_, color] = Clutter.Color.from_string(colorString);
+        [res_, color] = Cogl.Color.from_string(colorString);
         colorString = this._settings.get_string(SECONDARY_COLOR_KEY);
-        [res_, secondColor] = Clutter.Color.from_string(colorString);
+        [res_, secondColor] = Cogl.Color.from_string(colorString);
 
         let shadingType = this._settings.get_enum(COLOR_SHADING_TYPE_KEY);
 
