@@ -73,12 +73,17 @@ class PrefsWidget {
         fileChooser.add_button("Open", Gtk.ResponseType.ACCEPT);
 
         fileChooser.connect("response", (dialog, response) => {
-            if (response == Gtk.ResponseType.ACCEPT) {
-                let file = dialog.get_file().get_path()
-                if (file.length > 0)
-                    this.setting_entry.set_text(file);
-                fileChooser.destroy();
-            }
+
+        if (response == Gtk.ResponseType.ACCEPT) {
+        let path = dialog.get_file().get_path();
+        let uri = GLib.filename_to_uri(path, null);
+        this.setting_entry.set_text(uri);
+        this.gsettings.set_string('picture-uri', uri);
+        this.gsettings.set_string('picture-uri-dark', uri);
+        fileChooser.destroy();
+}
+
+            
         });
 
         fileChooser.show();
