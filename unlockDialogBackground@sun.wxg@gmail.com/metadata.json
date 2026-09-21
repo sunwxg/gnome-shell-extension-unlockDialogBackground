@@ -6,10 +6,7 @@
   "name": "Lock screen background",
   "description": "Change lock screen background.",
   "shell-version": [
-    "47",
-    "48",
-    "49",
-    "50"
+    "51"
   ],
   "session-modes": ["user", "unlock-dialog"],
   "original-authors": "sun.wxg@gmail.com",
