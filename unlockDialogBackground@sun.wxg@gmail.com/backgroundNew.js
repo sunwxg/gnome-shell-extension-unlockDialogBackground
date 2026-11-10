@@ -767,11 +767,11 @@ class BackgroundSource {
             }
         }
 
-        // Animated backgrounds are (potentially) per-monitor, since
-        // they can have variants that depend on the aspect ratio and
-        // size of the monitor; for other backgrounds we can use the
-        // same background object for all monitors.
-        if (file == null || !file.get_basename().endsWith('.xml'))
+        // Slideshow XML can pick a different file per monitor size, so
+        // those stay per-monitor below. A static image must too: the
+        // lock-screen actors are not in Meta.WindowGroup, and a single
+        // Meta.Background built for monitor 0 never paints on the others.
+        if (file == null)
             monitorIndex = 0;
 
         if (!(monitorIndex in this._backgrounds)) {
@@ -966,10 +966,16 @@ export class BackgroundManager extends Signals.EventEmitter {
 
         this._container.add_child(backgroundActor);
 
+        // The shield widget is already placed on its monitor. The actor
+        // must fill that widget; content-size alone leaves the other
+        // monitors on the theme's black screen-shield background.
+        const monitor = this._layoutManager.monitors[this._monitorIndex];
+        backgroundActor.set_size(monitor.width, monitor.height);
         if (this._controlPosition) {
-            const monitor = this._layoutManager.monitors[this._monitorIndex];
             backgroundActor.set_position(monitor.x, monitor.y);
             this._container.set_child_below_sibling(backgroundActor, null);
+        } else {
+            backgroundActor.set_position(0, 0);
         }
 
         let changeSignalId = background.connect('bg-changed', () => {
