@@ -543,6 +543,49 @@ const Background = GObject.registerClass({
         this._animation.update(this._layoutManager.monitors[this._monitorIndex]);
         const files = this._animation.keyFrameFiles;
 
+        // GNOME 50 fallback: mutter has no set_blend_textures/set_texture,
+        // use the file-based set_blend/set_file API instead.
+        if (typeof this.set_blend_textures !== 'function') {
+            const finish = () => {
+                this._setLoaded();
+                if (files.length > 1) {
+                    this.set_blend(files[0], files[1],
+                        this._animation.transitionProgress,
+                        this._style);
+                } else if (files.length > 0) {
+                    this.set_file(files[0], this._style);
+                } else {
+                    this.set_file(null, this._style);
+                }
+                this._queueUpdateAnimation();
+            };
+
+            const cache = Meta.BackgroundImageCache.get_default();
+            let numPendingImages = files.length;
+            if (numPendingImages === 0) {
+                finish();
+                return;
+            }
+            for (let i = 0; i < files.length; i++) {
+                this._watchFile(files[i]);
+                const image = cache.load(files[i]);
+                if (image.is_loaded()) {
+                    numPendingImages--;
+                    if (numPendingImages === 0)
+                        finish();
+                } else {
+                    // eslint-disable-next-line no-loop-func
+                    const id = image.connect('loaded', () => {
+                        image.disconnect(id);
+                        numPendingImages--;
+                        if (numPendingImages === 0)
+                            finish();
+                    });
+                }
+            }
+            return;
+        }
+
         if (files.length === 0) {
             this.set_file(null, this._style);
             this._setLoaded();
@@ -632,6 +675,24 @@ const Background = GObject.registerClass({
     }
 
     async _loadImage(file) {
+        // GNOME 50 fallback: mutter has no set_texture, use file-based API.
+        if (typeof this.set_texture !== 'function') {
+            this.set_file(file, this._style);
+            this._watchFile(file);
+
+            const cache = Meta.BackgroundImageCache.get_default();
+            const image = cache.load(file);
+            if (image.is_loaded()) {
+                this._setLoaded();
+            } else {
+                const id = image.connect('loaded', () => {
+                    this._setLoaded();
+                    image.disconnect(id);
+                });
+            }
+            return;
+        }
+
         this._watchFile(file);
 
         const cache = getBackgroundTextureCache();

@@ -61,8 +61,8 @@ function _showClockNew() {
 
     for (const widget of this._backgroundGroup) {
         const blur_effect = widget.get_effect('blur');
-        blur_effect.set_enabled(true);
         if (blur_effect) {
+            blur_effect.set_enabled(true);
             blur_effect.set({
                 radius: radius,
                 brightness: brightness,
@@ -87,11 +87,13 @@ function _showPromptNew() {
 
     for (const widget of this._backgroundGroup) {
         const blur_effect = widget.get_effect('blur');
-        blur_effect.set_enabled(true);
         if (blur_effect) {
+            blur_effect.set_enabled(true);
+            // Use the user's radius/brightness on the password page too,
+            // so the image stays visible instead of going near-black.
             blur_effect.set({
-                radius: DEFAULT_RADIUS,
-                brightness: DEFAULT_BRIGHTNESS,
+                radius: radius,
+                brightness: brightness,
             });
         }
     }
