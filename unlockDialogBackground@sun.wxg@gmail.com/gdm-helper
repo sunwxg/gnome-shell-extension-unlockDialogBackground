@@ -1,0 +1,250 @@
+#!/usr/bin/env bash
+# unlockDialogBackground-gdm-helper
+# Called via pkexec from extension prefs UI to set/reset GDM login background.
+# Usage:
+#   unlockDialogBackground-gdm-helper set <image-path>
+#   unlockDialogBackground-gdm-helper reset
+#   unlockDialogBackground-gdm-helper status
+#
+# Multi-monitor: GDM paints ONE CSS background across the whole desktop, so a
+# single image is stretched. We build a composite canvas with the same image
+# cover-fitted into each monitor rectangle (from monitors.xml).
+
+set -euo pipefail
+
+GDM_IMAGE="/usr/local/share/backgrounds/unlockDialogBackground.jpg"
+GREETER_DEFAULTS="/etc/gdm3/greeter.dconf-defaults"
+GENERATE_CONFIG="/usr/share/gdm/generate-config"
+
+cmd="${1:-}"
+image_path="${2:-}"
+
+invoking_home() {
+    local uid home user
+    uid="${PKEXEC_UID:-${SUDO_UID:-}}"
+    if [[ -n "$uid" ]]; then
+        home="$(getent passwd "$uid" | cut -d: -f6 || true)"
+        [[ -n "$home" ]] && { printf '%s' "$home"; return; }
+    fi
+    user="${SUDO_USER:-}"
+    if [[ -n "$user" && "$user" != "root" ]]; then
+        home="$(getent passwd "$user" | cut -d: -f6 || true)"
+        [[ -n "$home" ]] && { printf '%s' "$home"; return; }
+    fi
+    printf '%s' "${HOME:-/root}"
+}
+
+# Print "WxH+X+Y" lines for the best monitors.xml configuration.
+detect_monitor_rects() {
+    local home xml cand
+    home="$(invoking_home)"
+    xml=""
+    for cand in \
+        "$home/.config/monitors.xml" \
+        /var/lib/gdm3/.config/monitors.xml \
+        /var/lib/gdm/.config/monitors.xml
+    do
+        if [[ -f "$cand" ]]; then
+            xml="$cand"
+            break
+        fi
+    done
+    [[ -n "$xml" ]] || return 1
+
+    python3 - "$xml" <<'PY'
+import sys
+import xml.etree.ElementTree as ET
+
+root = ET.parse(sys.argv[1]).getroot()
+configs = root.findall("configuration")
+if not configs:
+    sys.exit(1)
+
+def score(cfg):
+    # Prefer layouts with more monitors, then physical layoutmode.
+    n = len(cfg.findall("logicalmonitor"))
+    physical = 1 if (cfg.findtext("layoutmode") == "physical") else 0
+    return (n, physical)
+
+cfg = max(configs, key=score)
+rects = []
+for lm in cfg.findall("logicalmonitor"):
+    x = int(lm.findtext("x", "0") or 0)
+    y = int(lm.findtext("y", "0") or 0)
+    scale = float(lm.findtext("scale", "1") or 1)
+    mon = lm.find("monitor")
+    mode = mon.find("mode") if mon is not None else None
+    if mode is None:
+        continue
+    w = int(mode.findtext("width"))
+    h = int(mode.findtext("height"))
+    rot = (lm.findtext("transform/rotation", "") or "").lower()
+    if rot in ("90", "270", "left", "right"):
+        w, h = h, w
+    lw = max(1, round(w / scale))
+    lh = max(1, round(h / scale))
+    rects.append(f"{lw}x{lh}+{x}+{y}")
+
+if not rects:
+    sys.exit(1)
+print("\n".join(rects))
+PY
+}
+
+# Cover-fit source into each monitor rect on a black canvas → dest JPEG.
+build_multi_monitor_image() {
+    local src="$1" dest="$2"
+    shift 2
+    local -a rects=("$@")
+
+    python3 - "$src" "$dest" "${rects[@]}" <<'PY'
+import sys
+from PIL import Image
+
+src_path = sys.argv[1]
+dest_path = sys.argv[2]
+rects = []
+for spec in sys.argv[3:]:
+    # WxH+X+Y
+    wh, _, rest = spec.partition("+")
+    w_s, _, h_s = wh.partition("x")
+    x_s, _, y_s = rest.partition("+")
+    rects.append((int(w_s), int(h_s), int(x_s), int(y_s)))
+
+if not rects:
+    raise SystemExit("no monitor rects")
+
+max_w = max(x + w for w, h, x, y in rects)
+max_h = max(y + h for w, h, x, y in rects)
+
+src = Image.open(src_path).convert("RGB")
+canvas = Image.new("RGB", (max_w, max_h), (0, 0, 0))
+
+for w, h, x, y in rects:
+    # Cover-fit: scale so image fills the monitor, then center-crop.
+    sw, sh = src.size
+    scale = max(w / sw, h / sh)
+    nw = max(1, round(sw * scale))
+    nh = max(1, round(sh * scale))
+    tile = src.resize((nw, nh), Image.Resampling.LANCZOS)
+    left = max(0, (nw - w) // 2)
+    top = max(0, (nh - h) // 2)
+    tile = tile.crop((left, top, left + w, top + h))
+    canvas.paste(tile, (x, y))
+
+canvas.save(dest_path, "JPEG", quality=92, optimize=True)
+print(f"composite {max_w}x{max_h} for {len(rects)} monitor(s)")
+PY
+}
+
+write_greeter_section() {
+    local uri="$1"
+    local size="$2"
+
+    if [[ ! -f "$GREETER_DEFAULTS" ]]; then
+        touch "$GREETER_DEFAULTS"
+    fi
+
+    if [[ -f "$GREETER_DEFAULTS" && ! -f "${GREETER_DEFAULTS}.bak" ]]; then
+        cp "$GREETER_DEFAULTS" "${GREETER_DEFAULTS}.bak"
+        echo "Backed up $GREETER_DEFAULTS -> ${GREETER_DEFAULTS}.bak"
+    fi
+
+    # Strip previous section (and our marker comment).
+    if grep -q '^\[com/ubuntu/login-screen\]' "$GREETER_DEFAULTS" 2>/dev/null; then
+        sed -i '/^\[com\/ubuntu\/login-screen\]/,/^\[/{/^\[com\/ubuntu\/login-screen\]/d;/^\[/!d}' "$GREETER_DEFAULTS"
+    fi
+    sed -i '/# GDM login screen background/d' "$GREETER_DEFAULTS" || true
+
+    cat >> "$GREETER_DEFAULTS" <<EOF
+
+# GDM login screen background (set by unlockDialogBackground extension)
+[com/ubuntu/login-screen]
+background-picture-uri='${uri}'
+background-size='${size}'
+background-repeat='no-repeat'
+EOF
+    echo "Updated $GREETER_DEFAULTS (size=${size})"
+}
+
+regenerate() {
+    if [[ -x "$GENERATE_CONFIG" ]]; then
+        "$GENERATE_CONFIG"
+        echo "Ran $GENERATE_CONFIG"
+    else
+        echo "WARNING: $GENERATE_CONFIG not found" >&2
+    fi
+}
+
+case "$cmd" in
+    set)
+        if [[ -z "$image_path" ]]; then
+            echo "ERROR: image path required" >&2
+            exit 1
+        fi
+        if [[ ! -f "$image_path" ]]; then
+            echo "ERROR: image not found: $image_path" >&2
+            exit 1
+        fi
+
+        mkdir -p /usr/local/share/backgrounds
+        bg_size="cover"
+
+        mapfile -t rects < <(detect_monitor_rects || true)
+        if [[ ${#rects[@]} -ge 2 ]]; then
+            echo "Multi-monitor layout: ${rects[*]}"
+            if build_multi_monitor_image "$image_path" "$GDM_IMAGE" "${rects[@]}"; then
+                # auto = original pixel size so the composite maps 1:1 to the greeter stage
+                bg_size="auto"
+            else
+                echo "WARNING: composite failed, falling back to single image" >&2
+                cp "$image_path" "$GDM_IMAGE"
+                bg_size="cover"
+            fi
+        else
+            if [[ ${#rects[@]} -eq 1 ]]; then
+                echo "Single monitor: ${rects[0]}"
+            else
+                echo "No monitors.xml layout found — single image"
+            fi
+            cp "$image_path" "$GDM_IMAGE"
+            bg_size="cover"
+        fi
+        chmod 644 "$GDM_IMAGE"
+        echo "Installed $GDM_IMAGE"
+
+        write_greeter_section "file://${GDM_IMAGE}" "$bg_size"
+        regenerate
+        echo "SUCCESS"
+        ;;
+
+    reset)
+        if [[ -f "${GREETER_DEFAULTS}.bak" ]]; then
+            cp "${GREETER_DEFAULTS}.bak" "$GREETER_DEFAULTS"
+            echo "Restored $GREETER_DEFAULTS from backup"
+        else
+            echo "No backup found, removing section manually"
+            if grep -q '^\[com/ubuntu/login-screen\]' "$GREETER_DEFAULTS" 2>/dev/null; then
+                sed -i '/^\[com\/ubuntu\/login-screen\]/,/^\[/{/^\[com\/ubuntu\/login-screen\]/d;/^\[/!d}' "$GREETER_DEFAULTS"
+                sed -i '/# GDM login screen background/d' "$GREETER_DEFAULTS" || true
+            fi
+        fi
+
+        rm -f "$GDM_IMAGE"
+        regenerate
+        echo "SUCCESS"
+        ;;
+
+    status)
+        if [[ -f "$GDM_IMAGE" ]] && grep -q '^\[com/ubuntu/login-screen\]' "$GREETER_DEFAULTS" 2>/dev/null; then
+            echo "SET"
+        else
+            echo "NOT_SET"
+        fi
+        ;;
+
+    *)
+        echo "Usage: $0 {set <image-path>|reset|status}" >&2
+        exit 1
+        ;;
+esac
